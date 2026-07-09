@@ -84,7 +84,7 @@ jobs:
  trivy-scan:
    name: Trivy Scan
    runs-on: ubuntu-latest
-   needs: sonar-scan
+   needs: build-test-sonar
    permissions:
      contents: read
      actions: read
