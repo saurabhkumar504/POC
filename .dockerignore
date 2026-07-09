@@ -1,0 +1,13 @@
+target/
+.m2/
+.git/
+.github/
+.idea/
+.vscode/
+*.md
+!reports/*.md
+Dockerfile
+docker-compose.yml
+trivy-report.json
+codeql-results.sarif
+*.log

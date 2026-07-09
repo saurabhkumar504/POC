@@ -1,0 +1,48 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:fragment="head(title)">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' — OWASP Lab'">OWASP Lab</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+
+<nav th:fragment="navbar" class="topnav">
+    <div class="topnav-inner">
+        <a class="brand" th:href="@{/dashboard}">OWASP&nbsp;Lab</a>
+        <div class="links">
+            <a th:href="@{/dashboard}">Dashboard</a>
+            <a th:href="@{/products}">Products</a>
+            <a th:href="@{/users}">Users</a>
+            <a th:href="@{/comments}">Comments</a>
+            <a th:href="@{/transfer}">Transfer</a>
+            <a th:href="@{/vulnerabilities}">Vulnerabilities</a>
+        </div>
+        <div class="me" sec:authorize="isAuthenticated()">
+            <span class="me-name">
+                <span sec:authentication="name">user</span>
+                <span class="me-role" sec:authorize="hasRole('ADMIN')">ADMIN</span>
+                <span class="me-role user" sec:authorize="hasRole('USER') and !hasRole('ADMIN')">USER</span>
+            </span>
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+                <button type="submit" class="btn btn-ghost">Log out</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div th:fragment="flash" class="flash-wrap">
+    <div th:if="${info}"  class="flash flash-info"  th:text="${info}"></div>
+    <div th:if="${error}" class="flash flash-error" th:text="${error}"></div>
+</div>
+
+<footer th:fragment="footer" class="footer">
+    <p>OWASP Top 10 (2021) Vulnerability Lab &mdash;
+       intentionally insecure, local sandbox use only.</p>
+</footer>
+
+</body>
+</html>

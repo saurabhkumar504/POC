@@ -1,0 +1,41 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Sign in')}"></head>
+<body class="login-page">
+<main class="card login-card">
+    <h1>OWASP Lab</h1>
+    <p class="muted">Sign in to access the demo.</p>
+
+    <div th:if="${param.error}" class="flash flash-error">
+        Invalid username or password.
+    </div>
+    <div th:if="${param.logout}" class="flash flash-info">
+        You have been signed out.
+    </div>
+
+    <form th:action="@{/login}" method="post" class="form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" required autofocus>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required>
+
+        <button type="submit" class="btn btn-primary">Sign in</button>
+    </form>
+
+    <details class="muted seed-hint">
+        <summary>Demo credentials</summary>
+        <table>
+            <thead><tr><th>User</th><th>Password</th><th>Role</th></tr></thead>
+            <tbody>
+                <tr><td>alice</td><td>alice123</td><td>USER</td></tr>
+                <tr><td>bob</td><td>bob123</td><td>USER</td></tr>
+                <tr><td>admin</td><td>admin123</td><td>ADMIN</td></tr>
+            </tbody>
+        </table>
+    </details>
+</main>
+</body>
+</html>

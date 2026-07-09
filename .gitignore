@@ -1,0 +1,25 @@
+target/
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+build/
+out/
+*.log
+*.tmp
+HELP.md
+.mvn/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+# Local Claude Code pipeline output
+# Reports are tracked in git so the latest assessment/remediation state is recoverable.
+# Everything else under .claude/reports/ stays ignored.
+.claude/reports/*
+!.claude/reports/SECURITY_ASSESSMENT_REPORT.md
+!.claude/reports/SECURE_REMEDIATION_REPORT.md
+!.claude/reports/.gitkeep

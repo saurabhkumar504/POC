@@ -1,0 +1,55 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Users')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main class="container">
+    <h1>Users</h1>
+    <p class="muted">
+        <span sec:authorize="hasRole('ADMIN')">
+            You see <b>all</b> users (admin only &mdash; same rule as
+            <code>GET /api/users</code>).
+        </span>
+        <span sec:authorize="hasRole('USER') and !hasRole('ADMIN')">
+            You see <b>only your own row</b>.  The
+            <code>/api/profile/{id}</code> IDOR remediation in action.
+        </span>
+    </p>
+
+    <div class="card table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="num">ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th class="num">Balance&nbsp;(USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:if="${#lists.isEmpty(users)}">
+                    <td colspan="5" class="muted center">Nothing to show.</td>
+                </tr>
+                <tr th:each="u : ${users}">
+                    <td class="num" th:text="${u.id}">1</td>
+                    <td th:text="${u.username}">user</td>
+                    <td th:text="${u.email}">user@example.com</td>
+                    <td>
+                        <span class="role-pill"
+                              th:classappend="${u.role == 'ADMIN'} ? ' admin' : ''"
+                              th:text="${u.role}">USER</span>
+                    </td>
+                    <td class="num" th:text="${#numbers.formatDecimal(u.balance, 1, 2)}">0.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

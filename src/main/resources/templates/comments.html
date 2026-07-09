@@ -1,0 +1,60 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Comments')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main class="container">
+    <h1>Comments</h1>
+    <p class="muted">
+        Backed by <code>CommentController.all()</code> and
+        <code>CommentViewController</code>.  All comment bodies in this
+        list are rendered with HTML escaping &mdash; try posting
+        <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> and watch it
+        appear as literal text (the XSS remediation).
+    </p>
+
+    <div class="card table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="num">ID</th>
+                    <th>Author</th>
+                    <th>Body</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:if="${#lists.isEmpty(comments)}">
+                    <td colspan="3" class="muted center">No comments yet.</td>
+                </tr>
+                <tr th:each="c : ${comments}">
+                    <td class="num" th:text="${c.id}">1</td>
+                    <td th:text="${c.author}">author</td>
+                    <td class="body-cell" th:text="${c.body}">body</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <section class="card form-card">
+        <h2>Add a comment</h2>
+        <form th:action="@{/comments}" method="post" class="form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <label for="author">Author</label>
+            <input id="author" name="author" type="text"
+                   th:placeholder="${me != null} ? 'Defaults to your username' : 'anonymous'">
+
+            <label for="body">Body</label>
+            <textarea id="body" name="body" rows="3" required maxlength="2000"
+                      placeholder="Write something (HTML is rendered as text)."></textarea>
+
+            <button type="submit" class="btn btn-primary">Post comment</button>
+        </form>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

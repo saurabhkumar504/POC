@@ -1,0 +1,74 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Transfer')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main class="container">
+    <h1>Transfer money</h1>
+    <p class="muted">
+        Form posts to <code>POST /transfer</code> on the UI.  Reuses the
+        same domain rules as <code>POST /api/transfer</code>: a USER
+        can only transfer <i>from</i> their own account; an ADMIN can
+        transfer from any account.
+    </p>
+
+    <section class="card form-card">
+        <h2>New transfer</h2>
+        <form th:action="@{/transfer}" method="post" class="form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+            <label for="fromId">From</label>
+            <select id="fromId" name="fromId" required>
+                <option th:each="u : ${users}"
+                        th:value="${u.id}"
+                        th:text="${u.username} + ' (balance ' + ${#numbers.formatDecimal(u.balance, 1, 2)} + ')'">
+                </option>
+            </select>
+
+            <label for="toId">To</label>
+            <select id="toId" name="toId" required>
+                <option th:each="u : ${users}"
+                        th:value="${u.id}"
+                        th:text="${u.username} + ' (balance ' + ${#numbers.formatDecimal(u.balance, 1, 2)} + ')'">
+                </option>
+            </select>
+
+            <label for="amount">Amount</label>
+            <input id="amount" name="amount" type="number" step="0.01" min="0.01" required>
+
+            <button type="submit" class="btn btn-primary">Send</button>
+        </form>
+    </section>
+
+    <section class="card table-card">
+        <h2>Current balances</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="num">ID</th>
+                    <th>Username</th>
+                    <th>Role</th>
+                    <th class="num">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="u : ${users}">
+                    <td class="num" th:text="${u.id}">1</td>
+                    <td th:text="${u.username}">user</td>
+                    <td>
+                        <span class="role-pill"
+                              th:classappend="${u.role == 'ADMIN'} ? ' admin' : ''"
+                              th:text="${u.role}">USER</span>
+                    </td>
+                    <td class="num" th:text="${#numbers.formatDecimal(u.balance, 1, 2)}">0.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

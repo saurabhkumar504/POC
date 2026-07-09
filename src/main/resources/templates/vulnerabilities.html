@@ -1,0 +1,60 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Vulnerabilities')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main class="container">
+    <h1>OWASP Top 10 (2021) inventory</h1>
+    <p class="muted">
+        This lab is intentionally insecure.  Every endpoint below is
+        reachable both through this UI and through the underlying
+        <code>/api/*</code> JSON endpoints.  Hardcoded secrets are no
+        longer rendered here &mdash; they are sourced from environment
+        variables at deploy time (see <code>application.properties</code>).
+    </p>
+
+    <div class="card table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Endpoint</th>
+                    <th>OWASP&nbsp;2021</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="v : ${findings}">
+                    <td><code th:text="${v.endpoint}">GET /api/x</code></td>
+                    <td th:text="${v.owasp}">A01</td>
+                    <td th:text="${v.description}">desc</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <section class="card">
+        <h2>How to test from the UI</h2>
+        <ul>
+            <li>
+                <a th:href="@{/comments}">Comments</a> &mdash; try posting
+                <code>&lt;script&gt;alert(1)&lt;/script&gt;</code> and
+                watch it render as literal text (XSS remediation).
+            </li>
+            <li>
+                <a th:href="@{/users}">Users</a> &mdash; non-admin users
+                see only their own row (IDOR remediation).
+            </li>
+            <li>
+                <a th:href="@{/transfer}">Transfer</a> &mdash; form posts
+                require a CSRF token (CSRF re-enabled).
+            </li>
+        </ul>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

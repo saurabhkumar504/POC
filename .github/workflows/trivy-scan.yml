@@ -1,0 +1,41 @@
+name: Trivy Security Scan
+
+on:
+  schedule:
+    # Run weekly to catch newly disclosed CVEs
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      severity_threshold:
+        description: 'Fail the build if vulnerabilities of this severity or higher are found'
+        required: false
+        default: 'CRITICAL'
+        type: choice
+        options:
+          - CRITICAL
+          - HIGH
+          - MEDIUM
+          - LOW
+          - UNKNOWN
+
+env:
+  IMAGE_NAME: employee-management
+  IMAGE_TAG: ${{ github.sha }}
+  TRIVY_VERSION: '0.58.0'
+  SEVERITY_THRESHOLD: ${{ github.event.inputs.severity_threshold || 'CRITICAL' }}
+
+jobs:
+  # Trivy scanning is now handled in employee-pipeline.yml
+  # This workflow is kept for scheduled weekly scans and manual workflow_dispatch only
+  
+  notice:
+    name: Notice - Trivy Consolidated
+    runs-on: ubuntu-latest
+    steps:
+      - name: Display message
+        run: |
+          echo "ℹ️  Trivy security scanning is now consolidated into the Enterprise Employee Pipeline"
+          echo "Scheduled runs: Weekly on Mondays at 6:00 AM UTC"
+          echo "Manual runs: Available via workflow_dispatch"
+          echo ""
+          echo "For push/PR events, all scanning occurs in: employee-pipeline.yml"

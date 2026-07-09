@@ -1,0 +1,42 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Products')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main class="container">
+    <h1>Products</h1>
+    <p class="muted">
+        Catalogue served by <code>ProductController.list()</code>.  Same data
+        you would see at <code>GET /api/products</code>.
+    </p>
+
+    <div class="card table-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th class="num">ID</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th class="num">Price&nbsp;(USD)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:if="${#lists.isEmpty(products)}">
+                    <td colspan="4" class="muted center">No products yet.</td>
+                </tr>
+                <tr th:each="p : ${products}">
+                    <td class="num" th:text="${p.id}">1</td>
+                    <td th:text="${p.name}">Name</td>
+                    <td th:text="${p.description}">Description</td>
+                    <td class="num" th:text="${#numbers.formatDecimal(p.price, 1, 2)}">0.00</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

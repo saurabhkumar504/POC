@@ -1,0 +1,62 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="~{fragments/layout :: head('Dashboard')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+<div th:replace="~{fragments/layout :: flash}"></div>
+
+<main class="container">
+    <h1>Dashboard</h1>
+    <p class="muted" sec:authorize="isAuthenticated()">
+        Signed in as <b sec:authentication="name">user</b>.
+    </p>
+    <p class="muted" sec:authorize="!isAuthenticated()">
+        <a th:href="@{/login}">Sign in</a> to access the demo.
+    </p>
+
+    <section class="cards">
+        <a class="card tile" th:href="@{/products}">
+            <span class="tile-label">Products</span>
+            <span class="tile-value" th:text="${productCount}">0</span>
+        </a>
+        <a class="card tile" th:href="@{/users}">
+            <span class="tile-label">Users</span>
+            <span class="tile-value" th:text="${userCount}">0</span>
+        </a>
+        <a class="card tile" th:href="@{/comments}">
+            <span class="tile-label">Comments</span>
+            <span class="tile-value" th:text="${commentCount}">0</span>
+        </a>
+        <a class="card tile" th:href="@{/transfer}">
+            <span class="tile-label">Transfer</span>
+            <span class="tile-value small">send money</span>
+        </a>
+        <a class="card tile" th:href="@{/vulnerabilities}">
+            <span class="tile-label">Vulnerabilities</span>
+            <span class="tile-value small">OWASP inventory</span>
+        </a>
+    </section>
+
+    <section class="card">
+        <h2>What is this?</h2>
+        <p>
+            This is the UI for the OWASP Top 10 (2021) Vulnerability Lab.  Every
+            endpoint documented on the
+            <a th:href="@{/vulnerabilities}">Vulnerabilities</a> page is reachable
+            both through this UI and through the underlying <code>/api/*</code>
+            JSON endpoints.  The two surfaces share the same Spring Security
+            configuration, so the same authorization rules apply to both.
+        </p>
+        <p>
+            Form posts require a valid CSRF token.  All user-controlled text
+            rendered in the UI is HTML-escaped automatically by Thymeleaf's
+            <code>th:text</code> attribute, which is the
+            <a th:href="@{/vulnerabilities}">XSS remediation</a> in action.
+        </p>
+    </section>
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

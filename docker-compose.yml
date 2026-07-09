@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  employee-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: employee-management:1.0.0
+    container_name: employee-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - JAVA_OPTS=-XX:+UseG1GC -XX:MaxRAMPercentage=75
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - employee-net
+
+  trivy-scanner:
+    image: aquasec/trivy:latest
+    container_name: trivy-scanner
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/scan
+    working_dir: /scan
+    command: ["fs", "--security-checks", "vuln,config,secret", "--format", "json", "--output", "/scan/trivy-report.json", "/scan"]
+    networks:
+      - employee-net
+
+networks:
+  employee-net:
+    driver: bridge
