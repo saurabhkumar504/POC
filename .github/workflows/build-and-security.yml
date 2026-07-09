@@ -1,1 +1,177 @@
-name: Enterprise Employee Pipeline on: push: branches: [ main, develop ] pull_request: branches: [ main ] workflow_dispatch: env: JAVA_VERSION: "21" MAVEN_OPTS: "-Xmx2g -Dmaven.repo.local=${{ github.workspace }}/.m2/repository" NVIDIA_API_URL: "https://integrate.api.nvidia.com/v1/chat/completions" NVIDIA_MODEL: "meta/llama-3.1-70b-instruct" jobs: # ---------------------------------------------------------------------- # JOB 1: Build # ---------------------------------------------------------------------- build: name: Build runs-on: ubuntu-latest permissions: contents: read actions: read steps: - name: 1. Checkout repository uses: actions/checkout@v4 - name: 2. Setup Java 21 uses: actions/setup-java@v4 with: java-version: ${{ env.JAVA_VERSION }} distribution: temurin cache: maven - name: 3. Cache Maven dependencies uses: actions/cache@v4 with: path: | ~/.m2/repository ~/.m2/wrapper key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }} restore-keys: | ${{ runner.os }}-maven- - name: 4. Build (skip tests) run: mvn -B -ntp -DskipTests package - name: 5. Upload JAR artifact uses: actions/upload-artifact@v4 with: name: app-jar path: target/employee-management.jar if-no-files-found: error retention-days: 7 # ---------------------------------------------------------------------- # JOB 2: Test & Coverage # ---------------------------------------------------------------------- test-coverage: name: Test & Coverage runs-on: ubuntu-latest needs: build permissions: contents: read actions: read steps: - name: 1. Checkout repository uses: actions/checkout@v4 - name: 2. Setup Java 21 uses: actions/setup-java@v4 with: java-version: ${{ env.JAVA_VERSION }} distribution: temurin cache: maven - name: 3. Cache Maven dependencies uses: actions/cache@v4 with: path: | ~/.m2/repository ~/.m2/wrapper key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }} restore-keys: | ${{ runner.os }}-maven- - name: 4. Run Unit Tests run: mvn -B -ntp test - name: 5. Generate JaCoCo Reports (HTML / XML / CSV) run: | mvn -B -ntp jacoco:report mvn -B -ntp jacoco:report -Dformat=csv mvn -B -ntp jacoco:report -Dformat=xml continue-on-error: false - name: 6. Coverage gate (>= 80%) run: | if [ -f target/site/jacoco/jacoco.csv ]; then COVERAGE=$(awk -F, 'NR>1 && $1=="INSTRUCTION" && $4!="0" {print $4; exit}' target/site/jacoco/jacoco.csv) echo "Detected instruction coverage: $COVERAGE%" if [ -n "$COVERAGE" ]; then COVERAGE_INT=${COVERAGE%.*} if [ "$COVERAGE_INT" -lt 80 ]; then echo "::error::Coverage $COVERAGE% is below 80% threshold" exit 1 else echo "::notice::Coverage $COVERAGE% meets >=80% gate" fi fi else echo "::error::JaCoCo CSV not found" exit 1 fi - name: 7. Upload JaCoCo + JUnit reports uses: actions/upload-artifact@v4 with: name: coverage-reports path: | target/site/jacoco/** target/surefire-reports/** if-no-files-found: error retention-days: 30 # ---------------------------------------------------------------------- # JOB 3: NVIDIA Test Coverage Agent (depends on test-coverage) # ---------------------------------------------------------------------- nvidia-test-agent: name: NVIDIA Test Coverage Agent runs-on: ubuntu-latest needs: test-coverage permissions: contents: read actions: read if: always() steps: - name: 1. Checkout repository uses: actions/checkout@v4 - name: 2. Setup Python uses: actions/setup-python@v5 with: python-version: "3.11" - name: 3. Download coverage artifact uses: actions/download-artifact@v4 with: name: coverage-reports path: target continue-on-error: false - name: 4. Run NVIDIA Test Coverage Agent env: NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }} run: | mkdir -p reports python3 scripts/test-agent.py \ --junit target/surefire-reports \ --jacoco target/site/jacoco/jacoco.csv \ --source src/main/java \ --output reports/coverage-summary.md || echo "Test agent failed - continuing" - name: 5. Upload coverage summary uses: actions/upload-artifact@v4 with: name: nvidia-coverage-summary path: reports/coverage-summary.md if-no-files-found: warn retention-days: 30 # ---------------------------------------------------------------------- # JOB 4: Trivy Scan # ---------------------------------------------------------------------- trivy-scan: name: Trivy Scan runs-on: ubuntu-latest needs: build permissions: contents: read actions: read steps: - name: 1. Checkout repository uses: actions/checkout@v4 # trivy-action@v0.30.0 internally calls setup-trivy@v0.2.2, which was # never published. Even with skip-setup-trivy: true, GitHub Actions still # resolves the action reference at planning time, so we install the Trivy # CLI directly via apt and run it ourselves. - name: 2. Install Trivy run: | sudo apt-get update sudo apt-get install -y wget gnupg lsb-release wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list sudo apt-get update sudo apt-get install -y trivy
+name: Enterprise Employee Pipeline
+on:
+ push:
+   branches: [ main, develop ]
+ pull_request:
+   branches: [ main ]
+ workflow_dispatch:
+env:
+ JAVA_VERSION: "21"
+ MAVEN_OPTS: "-Xmx2g -Dmaven.repo.local=${{ github.workspace }}/.m2/repository"
+ NVIDIA_API_URL: "https://integrate.api.nvidia.com/v1/chat/completions"
+ NVIDIA_MODEL: "meta/llama-3.1-70b-instruct"
+jobs:
+ # ----------------------------------------------------------------------
+ # JOB 1: Build
+ # ----------------------------------------------------------------------
+ build:
+   name: Build
+   runs-on: ubuntu-latest
+   permissions:
+     contents: read
+     actions: read
+   steps:
+     - name: 1. Checkout repository
+       uses: actions/checkout@v4
+     - name: 2. Setup Java 21
+       uses: actions/setup-java@v4
+       with:
+         java-version: ${{ env.JAVA_VERSION }}
+         distribution: temurin
+         cache: maven
+     - name: 3. Cache Maven dependencies
+       uses: actions/cache@v4
+       with:
+         path: |
+           ~/.m2/repository
+           ~/.m2/wrapper
+         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+         restore-keys: |
+           ${{ runner.os }}-maven-
+     - name: 4. Build (skip tests)
+       run: mvn -B -ntp -DskipTests package
+     - name: 5. Upload JAR artifact
+       uses: actions/upload-artifact@v4
+       with:
+         name: app-jar
+         path: target/employee-management.jar
+         if-no-files-found: error
+         retention-days: 7
+ # ----------------------------------------------------------------------
+ # JOB 2: Test & Coverage
+ # ----------------------------------------------------------------------
+ test-coverage:
+   name: Test & Coverage
+   runs-on: ubuntu-latest
+   needs: build
+   permissions:
+     contents: read
+     actions: read
+   steps:
+     - name: 1. Checkout repository
+       uses: actions/checkout@v4
+     - name: 2. Setup Java 21
+       uses: actions/setup-java@v4
+       with:
+         java-version: ${{ env.JAVA_VERSION }}
+         distribution: temurin
+         cache: maven
+     - name: 3. Cache Maven dependencies
+       uses: actions/cache@v4
+       with:
+         path: |
+           ~/.m2/repository
+           ~/.m2/wrapper
+         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+         restore-keys: |
+           ${{ runner.os }}-maven-
+     - name: 4. Run Unit Tests
+       run: mvn -B -ntp test
+     - name: 5. Generate JaCoCo Reports (HTML / XML / CSV)
+       run: |
+         mvn -B -ntp jacoco:report
+         mvn -B -ntp jacoco:report -Dformat=csv
+         mvn -B -ntp jacoco:report -Dformat=xml
+       continue-on-error: false
+     - name: 6. Coverage gate (>= 80%)
+       run: |
+         if [ -f target/site/jacoco/jacoco.csv ]; then
+           COVERAGE=$(awk -F, 'NR>1 && $1=="INSTRUCTION" && $4!="0" {print $4; exit}' target/site/jacoco/jacoco.csv)
+           echo "Detected instruction coverage: $COVERAGE%"
+           if [ -n "$COVERAGE" ]; then
+             COVERAGE_INT=${COVERAGE%.*}
+             if [ "$COVERAGE_INT" -lt 80 ]; then
+               echo "::error::Coverage $COVERAGE% is below 80% threshold"
+               exit 1
+             else
+               echo "::notice::Coverage $COVERAGE% meets >=80% gate"
+             fi
+           fi
+         else
+           echo "::error::JaCoCo CSV not found"
+           exit 1
+         fi
+     - name: 7. Upload JaCoCo + JUnit reports
+       uses: actions/upload-artifact@v4
+       with:
+         name: coverage-reports
+         path: |
+           target/site/jacoco/**
+           target/surefire-reports/**
+         if-no-files-found: error
+         retention-days: 30
+ # ----------------------------------------------------------------------
+ # JOB 3: NVIDIA Test Coverage Agent (depends on test-coverage)
+ # ----------------------------------------------------------------------
+ nvidia-test-agent:
+   name: NVIDIA Test Coverage Agent
+   runs-on: ubuntu-latest
+   needs: test-coverage
+   permissions:
+     contents: read
+     actions: read
+   if: always()
+   steps:
+     - name: 1. Checkout repository
+       uses: actions/checkout@v4
+     - name: 2. Setup Python
+       uses: actions/setup-python@v5
+       with:
+         python-version: "3.11"
+     - name: 3. Download coverage artifact
+       uses: actions/download-artifact@v4
+       with:
+         name: coverage-reports
+         path: target
+       continue-on-error: false
+     - name: 4. Run NVIDIA Test Coverage Agent
+       env:
+         NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+       run: |
+         mkdir -p reports
+         python3 scripts/test-agent.py \
+           --junit target/surefire-reports \
+           --jacoco target/site/jacoco/jacoco.csv \
+           --source src/main/java \
+           --output reports/coverage-summary.md || echo "Test agent failed - continuing"
+     - name: 5. Upload coverage summary
+       uses: actions/upload-artifact@v4
+       with:
+         name: nvidia-coverage-summary
+         path: reports/coverage-summary.md
+         if-no-files-found: warn
+         retention-days: 30
+ # ----------------------------------------------------------------------
+ # JOB 4: Trivy Scan
+ # ----------------------------------------------------------------------
+ trivy-scan:
+   name: Trivy Scan
+   runs-on: ubuntu-latest
+   needs: build
+   permissions:
+     contents: read
+     actions: read
+   steps:
+     - name: 1. Checkout repository
+       uses: actions/checkout@v4
+     # trivy-action@v0.30.0 internally calls setup-trivy@v0.2.2, which was
+     # never published. Even with skip-setup-trivy: true, GitHub Actions still
+     # resolves the action reference at planning time, so we install the Trivy
+     # CLI directly via apt and run it ourselves.
+     - name: 2. Install Trivy
+       run: |
+         sudo apt-get update
+         sudo apt-get install -y wget gnupg lsb-release
+         wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo gpg --dearmor -o /usr/share/keyrings/trivy.gpg
+         echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
+         sudo apt-get update
